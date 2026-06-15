@@ -5,7 +5,16 @@ const { auth } = require('../middleware');
 router.use(auth);
 
 router.get('/', async (req, res) => {
-  const tasks = await db.qAll('SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
+  const { status, priority, search } = req.query;
+  let sql = 'SELECT * FROM tasks WHERE user_id = ?';
+  const params = [req.user.id];
+
+  if (status)   { sql += ' AND status = ?';          params.push(status); }
+  if (priority) { sql += ' AND priority = ?';         params.push(priority); }
+  if (search)   { sql += ' AND title LIKE ?';         params.push(`%${search}%`); }
+
+  sql += ' ORDER BY created_at DESC';
+  const tasks = await db.qAll(sql, params);
   res.json(tasks);
 });
 
@@ -27,6 +36,7 @@ router.post('/', async (req, res) => {
     [req.user.id, title, description || '', status || 'todo', priority || 'medium', due_date || null]
   );
   const task = await db.qGet('SELECT * FROM tasks WHERE id = ?', [result.lastID]);
+  req.app.broadcast(req.user.id, { type: 'task_created', task });
   res.status(201).json(task);
 });
 
@@ -39,6 +49,7 @@ router.put('/:id', async (req, res) => {
     [title ?? task.title, description ?? task.description, status ?? task.status, priority ?? task.priority, due_date ?? task.due_date, task.id]
   );
   const updated = await db.qGet('SELECT * FROM tasks WHERE id = ?', [task.id]);
+  req.app.broadcast(req.user.id, { type: 'task_updated', task: updated });
   res.json(updated);
 });
 
@@ -46,6 +57,7 @@ router.delete('/:id', async (req, res) => {
   const task = await db.qGet('SELECT * FROM tasks WHERE id = ? AND user_id = ?', [req.params.id, req.user.id]);
   if (!task) return res.status(404).json({ error: 'Task not found' });
   await db.qRun('DELETE FROM tasks WHERE id = ?', [task.id]);
+  req.app.broadcast(req.user.id, { type: 'task_deleted', id: task.id });
   res.json({ success: true });
 });
 
