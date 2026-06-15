@@ -59,14 +59,23 @@ tasker-app/
 
 ### Installation & Run
 
+**Clone the repository:**
 ```bash
-# 1. Go to server folder
+git clone https://github.com/YOUR_USERNAME/tasker-app.git
+```
+
+**Navigate to the server folder:**
+```bash
 cd tasker-app/server
+```
 
-# 2. Install dependencies
+**Install dependencies:**
+```bash
 npm install
+```
 
-# 3. Start the server
+**Start the server:**
+```bash
 node index.js
 ```
 
